@@ -1,0 +1,14 @@
+#!/usr/bin/env node
+if (process.versions?.bun) {
+  const { main } = await import("../src/cli.ts");
+  process.exitCode = await main(process.argv.slice(2));
+} else {
+  try {
+    const { main } = await import("../dist/cli.js");
+    process.exitCode = await main(process.argv.slice(2));
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("agentsync: missing build output (dist/). Run `npm run build` (or `bun run build`) before executing from source.");
+    throw err;
+  }
+}

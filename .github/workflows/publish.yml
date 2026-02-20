@@ -1,0 +1,53 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Check tag format
+        id: tagcheck
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "publish=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "publish=false" >> "${GITHUB_OUTPUT}"
+            echo "Skipping publish: tag must match vx.y.z (got: ${GITHUB_REF_NAME})"
+          fi
+
+      - name: Check package version matches tag
+        if: steps.tagcheck.outputs.publish == 'true'
+        shell: bash
+        run: |
+          pkg_version="$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [[ "${pkg_version}" != "${tag_version}" ]]; then
+            echo "package.json version (${pkg_version}) does not match tag (${tag_version})"
+            exit 1
+          fi
+
+      - name: Install
+        if: steps.tagcheck.outputs.publish == 'true'
+        run: npm ci
+
+      - name: Publish
+        if: steps.tagcheck.outputs.publish == 'true'
+        run: npm publish --provenance --access public

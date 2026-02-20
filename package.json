@@ -1,0 +1,55 @@
+{
+  "name": "@claaslange/agentsync",
+  "version": "0.1.0",
+  "description": "Sync one canonical agent-instructions template to multiple harness-specific global instruction file locations.",
+  "type": "module",
+  "license": "MIT",
+  "author": "claaslange",
+  "homepage": "https://github.com/claaslange/agentsync",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/claaslange/agentsync.git"
+  },
+  "bugs": {
+    "url": "https://github.com/claaslange/agentsync/issues"
+  },
+  "keywords": [
+    "agent",
+    "agentsync",
+    "instructions",
+    "prompts",
+    "sync",
+    "codex",
+    "claude",
+    "copilot",
+    "prompt-engineering",
+    "developer-tools",
+    "cli"
+  ],
+  "bin": {
+    "agentsync": "./bin/agentsync"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "src/",
+    "example/",
+    "AGENTS.md",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node ./scripts/copy-schema.mjs",
+    "sync": "bun ./bin/agentsync",
+    "dry-run": "bun ./bin/agentsync --dry-run",
+    "check": "bun ./bin/agentsync --check",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  }
+}

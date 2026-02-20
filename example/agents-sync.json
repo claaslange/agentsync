@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/claaslange/agentsync/main/src/agents-sync.schema.json",
+  "template_path": "AGENTS_TEMPLATE.md",
+  "options": {
+    "overwrite": true,
+    "backup": true,
+    "backup_suffix": ".bak"
+  },
+  "targets": [
+    {
+      "agent": "codex",
+      "path": "./out/CODEX.md",
+      "enabled": false,
+      "variables": { "AGENT_NAME": "Codex", "USER": "User" }
+    },
+    {
+      "agent": "claude_code",
+      "path": "./out/CLAUDE.md",
+      "enabled": true,
+      "variables": { "AGENT_NAME": "Claude Code", "USER": "User" }
+    },
+    {
+      "agent": "github_copilot",
+      "path": "./out/copilot-instructions.md",
+      "enabled": true,
+      "variables": { "AGENT_NAME": "GitHub Copilot", "USER": "User" }
+    }
+  ]
+}
