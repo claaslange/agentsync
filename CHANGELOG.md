@@ -8,9 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.2.0] - 2026-02-21
+
+### Added
 - Liquid templating via `liquidjs`, including `{% if %}`, `{% for %}`, and `{% include %}`.
 - Default config file name `agentsync.config.json` and schema file name `agentsync.schema.json`.
 - Schema location is now `src/agentsync.schema.json` (previously `src/agents-sync.schema.json`) and on GitHub at `https://raw.githubusercontent.com/claaslange/agentsync/main/src/agentsync.schema.json`.
+- Unit tests (Node’s built-in `node:test`) covering Liquid and CLI behavior.
+- PR CI workflow running `npm run lint` and `npm test`.
+- Biome linting and formatting configuration.
 
 ### Changed
 - `--strict` now enables Liquid strict variables (undefined variables throw).
