@@ -46,6 +46,7 @@
     "sync": "bun ./bin/agentsync",
     "dry-run": "bun ./bin/agentsync --dry-run",
     "check": "bun ./bin/agentsync --check",
+    "test": "npm run build && node --test",
     "prepack": "npm run build"
   },
   "dependencies": {
