@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/claaslange/agentsync/blob/main/src/agents-sync.schema.json",
+  "$id": "https://github.com/claaslange/agentsync/blob/main/src/agentsync.schema.json",
   "title": "agentsync config",
   "type": "object",
   "additionalProperties": false,

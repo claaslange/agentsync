@@ -39,13 +39,13 @@ function printHelp(): void {
       "  agentsync check [--config <path>] [--template <path>] [--strict]",
       "",
       "Flags:",
-      "  --config   Path to config JSON (default: ~/.agentsync/agents-sync.json)",
+      "  --config   Path to config JSON (default: ~/.agentsync/agentsync.config.json)",
       "  --template Override template path (otherwise config.template_path / ~/.agentsync/AGENTS_TEMPLATE.md is used)",
-      "  --strict   Fail if any placeholders remain unresolved",
+      "  --strict   Fail if any template variables are undefined",
       "",
       "Defaults (when no --config is provided):",
-      "  1) ~/.agentsync/agents-sync.json",
-      "  2) ./agents-sync.json",
+      "  1) ~/.agentsync/agentsync.config.json",
+      "  2) ./agentsync.config.json",
     ].join("\n"),
   );
 }
@@ -55,7 +55,7 @@ let schemaCache: JsonSchema | null = null;
 
 async function loadBundledSchema(): Promise<JsonSchema> {
   if (schemaCache) return schemaCache;
-  const schemaPath = fileURLToPath(new URL("./agents-sync.schema.json", import.meta.url));
+  const schemaPath = fileURLToPath(new URL("./agentsync.schema.json", import.meta.url));
   const text = await readFile(schemaPath, "utf8");
   const parsed: unknown = JSON.parse(text);
   if (!isObject(parsed)) throw new Error(`Invalid bundled schema at ${schemaPath}`);
@@ -154,7 +154,7 @@ function parseCommonArgs(argv: string[]): {
   templatePathOverride: string | null;
   strict: boolean;
 } {
-  let configPath = "~/.agentsync/agents-sync.json";
+  let configPath = "~/.agentsync/agentsync.config.json";
   let configPathWasDefault = true;
   let templatePathOverride: string | null = null;
   let strict = false;
@@ -251,13 +251,13 @@ async function loadConfigWithDefaultFallback(opts: {
     return { ...loaded, configPath: resolvePath(opts.configPath, process.cwd()) };
   }
 
-  const homeCandidate = resolvePath("~/.agentsync/agents-sync.json", process.cwd());
+  const homeCandidate = resolvePath("~/.agentsync/agentsync.config.json", process.cwd());
   if (existsSync(homeCandidate)) {
     const loaded = await loadConfig(homeCandidate);
     return { ...loaded, configPath: homeCandidate };
   }
 
-  const cwdCandidate = path.resolve(process.cwd(), "agents-sync.json");
+  const cwdCandidate = path.resolve(process.cwd(), "agentsync.config.json");
   if (existsSync(cwdCandidate)) {
     const loaded = await loadConfig(cwdCandidate);
     return { ...loaded, configPath: cwdCandidate };

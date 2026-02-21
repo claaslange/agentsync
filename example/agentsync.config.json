@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/claaslange/agentsync/main/src/agents-sync.schema.json",
+  "$schema": "https://raw.githubusercontent.com/claaslange/agentsync/main/src/agentsync.schema.json",
   "template_path": "AGENTS_TEMPLATE.md",
   "options": {
     "overwrite": true,
