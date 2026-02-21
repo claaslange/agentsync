@@ -48,6 +48,9 @@
     "check": "bun ./bin/agentsync --check",
     "prepack": "npm run build"
   },
+  "dependencies": {
+    "liquidjs": "^10.21.1"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.0.0"

@@ -78,6 +78,15 @@ Built-in template variables (available for every target):
 - `TEMPLATE_PATH` (resolved template path)
 - `RUN_TIMESTAMP` (UTC timestamp)
 
+## Templating (Liquid)
+
+Templates are rendered using Liquid (via `liquidjs`).
+
+- Output variables: `{{ AGENT_NAME }}`
+- Control flow: `{% if ... %}...{% endif %}`, `{% for x in xs %}...{% endfor %}`
+- Includes: `{% include "partials/common.md" %}` (searched relative to the template directory, then the config directory)
+- `--strict` enables strict variables (undefined variables throw; useful for CI)
+
 ## Usage
 
 - `agentsync` (no args) shows help.

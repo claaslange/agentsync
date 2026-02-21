@@ -1,8 +1,9 @@
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { Liquid } from "liquidjs";
 
 type JsonScalar = string | number | boolean | null;
 
@@ -288,22 +289,15 @@ function iterTargets(targetsCfg: unknown): Array<Target & { variables: Record<st
   return targets;
 }
 
-const CURLY_RE = /\{\{\s*([A-Z0-9_]+)\s*\}\}/g;
-const DOLLAR_RE = /\$\{([A-Z0-9_]+)\}/g;
-
-function renderTemplate(templateText: string, variables: Record<string, string>, strict: boolean): string {
-  const rendered = templateText
-    .replace(CURLY_RE, (match, key: string) => variables[key] ?? match)
-    .replace(DOLLAR_RE, (match, key: string) => variables[key] ?? match);
-
-  if (strict) {
-    const unresolved = new Set<string>();
-    for (const m of rendered.matchAll(CURLY_RE)) unresolved.add(String(m[1]));
-    for (const m of rendered.matchAll(DOLLAR_RE)) unresolved.add(String(m[1]));
-    if (unresolved.size > 0) throw new Error(`Unresolved template variables: ${Array.from(unresolved).sort().join(", ")}`);
-  }
-
-  return rendered;
+async function renderTemplate(
+  templateText: string,
+  variables: Record<string, string>,
+  strict: boolean,
+  liquid: Liquid,
+): Promise<string> {
+  return await liquid.parseAndRender(templateText, variables, {
+    strictVariables: strict,
+  });
 }
 
 async function readTextIfExists(filePath: string): Promise<string | null> {
@@ -333,11 +327,11 @@ async function writeFileIfChanged(opts: {
   const existing = await readTextIfExists(opts.dest);
   if (existing === opts.content) return false;
 
-  if (opts.dryRun || opts.check) return true;
-
   if (existing !== null && !opts.overwrite) {
     throw new Error(`Refusing to overwrite existing file (set options.overwrite=true): ${opts.dest}`);
   }
+
+  if (opts.dryRun || opts.check) return true;
 
   await mkdir(path.dirname(opts.dest), { recursive: true });
   if (existing !== null && opts.backup) {
@@ -417,6 +411,32 @@ export async function main(argv: string[]): Promise<number> {
       .replace(".", "")
       .slice(0, 14);
 
+    const liquidRoots = Array.from(new Set([path.dirname(templatePath), baseDir]));
+    const liquid = new Liquid({
+      root: liquidRoots,
+      partials: liquidRoots,
+      layouts: liquidRoots,
+      extname: "",
+      cache: false,
+      lenientIf: true,
+      fs: {
+        sep: path.sep,
+        dirname: (file) => path.dirname(file),
+        contains: (root, file) => {
+          const rel = path.relative(root, file);
+          return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+        },
+        exists: async (filepath) => existsSync(filepath),
+        existsSync: (filepath) => existsSync(filepath),
+        readFile: async (filepath) => await readFile(filepath, "utf8"),
+        readFileSync: (filepath) => readFileSync(filepath, "utf8"),
+        resolve: (dir, file, ext) => {
+          const withExt = path.extname(file) ? file : `${file}${ext}`;
+          return path.resolve(dir, withExt);
+        },
+      },
+    });
+
     let anyChanges = false;
     for (const target of enabledTargets) {
       const dest = resolvePath(target.rawPath, baseDir);
@@ -431,7 +451,7 @@ export async function main(argv: string[]): Promise<number> {
         ...target.variables,
       };
 
-      const rendered = renderTemplate(templateText, varsForTarget, strict);
+      const rendered = await renderTemplate(templateText, varsForTarget, strict, liquid);
       const changed = await writeFileIfChanged({
         dest,
         content: rendered,
