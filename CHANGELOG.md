@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Liquid templating via `liquidjs`, including `{% if %}`, `{% for %}`, and `{% include %}`.
 - Default config file name `agentsync.config.json` and schema file name `agentsync.schema.json`.
-- Schema location is now `src/agentsync.schema.json` (previously `src/agents-sync.schema.json`).
+- Schema location is now `src/agentsync.schema.json` (previously `src/agents-sync.schema.json`) and on GitHub at `https://raw.githubusercontent.com/claaslange/agentsync/main/src/agentsync.schema.json`.
 
 ### Changed
 - `--strict` now enables Liquid strict variables (undefined variables throw).
