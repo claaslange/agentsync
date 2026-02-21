@@ -33,7 +33,8 @@ function captureConsole(fn) {
 test("renders Liquid variables + if + for", async () => {
   await withTempDir(async (dir) => {
     const templatePath = path.join(dir, "AGENTS_TEMPLATE.md");
-    const outPath = path.join(dir, "out.md");
+    const outClaudePath = path.join(dir, "out-claude.md");
+    const outCodexPath = path.join(dir, "out-codex.md");
     await writeFile(
       templatePath,
       [
@@ -49,7 +50,10 @@ test("renders Liquid variables + if + for", async () => {
       JSON.stringify(
         {
           template_path: "AGENTS_TEMPLATE.md",
-          targets: [{ agent: "claude", path: "out.md", variables: { AGENT_NAME: "Claude", USER: "User" } }],
+          targets: [
+            { agent: "claude", path: "out-claude.md", variables: { AGENT_NAME: "Claude", USER: "User" } },
+            { agent: "codex", path: "out-codex.md", variables: { AGENT_NAME: "Codex", USER: "User" } },
+          ],
         },
         null,
         2,
@@ -61,10 +65,16 @@ test("renders Liquid variables + if + for", async () => {
     assert.equal(result, 0);
     assert.deepEqual(errors, []);
 
-    const out = await readFile(outPath, "utf8");
-    assert.match(out, /Hello User from Claude/);
-    assert.match(out, /CLAUDE/);
-    assert.match(out, /123/);
+    const outClaude = await readFile(outClaudePath, "utf8");
+    assert.match(outClaude, /Hello User from Claude/);
+    assert.match(outClaude, /CLAUDE/);
+    assert.match(outClaude, /123/);
+
+    const outCodex = await readFile(outCodexPath, "utf8");
+    assert.match(outCodex, /Hello User from Codex/);
+    assert.doesNotMatch(outCodex, /Claude/);
+    assert.doesNotMatch(outCodex, /CLAUDE/);
+    assert.match(outCodex, /123/);
   });
 });
 
@@ -140,4 +150,3 @@ test("dry-run respects overwrite=false (predicts sync refusal)", async () => {
     assert.ok(errors.join("\n").includes("Refusing to overwrite"));
   });
 });
-
