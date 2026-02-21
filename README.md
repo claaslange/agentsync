@@ -5,7 +5,7 @@ Sync one canonical agent-instructions template to multiple harness-specific “g
 ## What it does
 
 - You keep a single template file (default: `~/.agentsync/AGENTS_TEMPLATE.md`).
-- You define multiple targets in a single config file (default: `~/.agentsync/agents-sync.json`).
+- You define multiple targets in a single config file (default: `~/.agentsync/agentsync.config.json`).
 - `agentsync` renders the template for each target and writes it to the configured destination paths.
 
 ## Install
@@ -30,7 +30,7 @@ Copy the example files:
 
 ```bash
 mkdir -p ~/.agentsync
-cp ./example/agents-sync.json ~/.agentsync/agents-sync.json
+cp ./example/agentsync.config.json ~/.agentsync/agentsync.config.json
 cp ./example/AGENTS_TEMPLATE.md ~/.agentsync/AGENTS_TEMPLATE.md
 ```
 
@@ -57,7 +57,7 @@ Minimal example:
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/claaslange/agentsync/main/src/agents-sync.schema.json",
+  "$schema": "https://raw.githubusercontent.com/claaslange/agentsync/main/src/agentsync.schema.json",
   "template_path": "AGENTS_TEMPLATE.md",
   "targets": [
     { "agent": "codex", "path": "~/.codex/AGENTS.md" },
@@ -69,7 +69,7 @@ Minimal example:
 
 Editor validation / autocomplete:
 
-- Add a `$schema` key to your config, e.g. `https://raw.githubusercontent.com/claaslange/agentsync/main/src/agents-sync.schema.json`.
+- Add a `$schema` key to your config, e.g. `https://raw.githubusercontent.com/claaslange/agentsync/main/src/agentsync.schema.json`.
 
 Built-in template variables (available for every target):
 
@@ -78,12 +78,21 @@ Built-in template variables (available for every target):
 - `TEMPLATE_PATH` (resolved template path)
 - `RUN_TIMESTAMP` (UTC timestamp)
 
+## Templating (Liquid)
+
+Templates are rendered using Liquid (via `liquidjs`).
+
+- Output variables: `{{ AGENT_NAME }}`
+- Control flow: `{% if ... %}...{% endif %}`, `{% for x in xs %}...{% endfor %}`
+- Includes: `{% include "partials/common.md" %}` (searched relative to the template directory, then the config directory)
+- `--strict` enables strict variables (undefined variables throw; useful for CI)
+
 ## Usage
 
 - `agentsync` (no args) shows help.
 - When run with no `--config`, `agentsync` looks for:
-  - `~/.agentsync/agents-sync.json`
-  - `./agents-sync.json`
+  - `~/.agentsync/agentsync.config.json`
+  - `./agentsync.config.json`
 - When run with no `--template`, `agentsync` uses:
   - `config.template_path` (when present), otherwise
   - `~/.agentsync/AGENTS_TEMPLATE.md`
@@ -98,8 +107,8 @@ agentsync check
 ## Repo files
 
 - `example/AGENTS_TEMPLATE.md` — example template.
-- `example/agents-sync.json` — example config.
-- `src/agents-sync.schema.json` — JSON Schema used by the CLI.
+- `example/agentsync.config.json` — example config.
+- `src/agentsync.schema.json` — JSON Schema used by the CLI.
 - `src/cli.ts` / `bin/agentsync` — the sync CLI.
 
 ## Publishing (maintainers)

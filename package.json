@@ -29,15 +29,7 @@
   "bin": {
     "agentsync": "./bin/agentsync"
   },
-  "files": [
-    "bin/",
-    "dist/",
-    "src/",
-    "example/",
-    "AGENTS.md",
-    "LICENSE",
-    "README.md"
-  ],
+  "files": ["bin/", "dist/", "src/", "example/", "AGENTS.md", "LICENSE", "README.md"],
   "publishConfig": {
     "access": "public"
   },
@@ -46,9 +38,16 @@
     "sync": "bun ./bin/agentsync",
     "dry-run": "bun ./bin/agentsync --dry-run",
     "check": "bun ./bin/agentsync --check",
+    "test": "npm run build && node --test",
+    "lint": "biome check . --error-on-warnings",
+    "format": "biome format . --write",
     "prepack": "npm run build"
   },
+  "dependencies": {
+    "liquidjs": "^10.21.1"
+  },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.0.0",
     "typescript": "^5.0.0"
   }

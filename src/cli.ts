@@ -1,12 +1,18 @@
+import { existsSync, readFileSync } from "node:fs";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { Liquid } from "liquidjs";
 
 type JsonScalar = string | number | boolean | null;
 
-type TargetEntry = { agent: string; path: string; enabled?: boolean; variables?: Record<string, JsonScalar> };
+type TargetEntry = {
+  agent: string;
+  path: string;
+  enabled?: boolean;
+  variables?: Record<string, JsonScalar>;
+};
 type Config = {
   template_path?: string;
   options?: {
@@ -38,13 +44,13 @@ function printHelp(): void {
       "  agentsync check [--config <path>] [--template <path>] [--strict]",
       "",
       "Flags:",
-      "  --config   Path to config JSON (default: ~/.agentsync/agents-sync.json)",
+      "  --config   Path to config JSON (default: ~/.agentsync/agentsync.config.json)",
       "  --template Override template path (otherwise config.template_path / ~/.agentsync/AGENTS_TEMPLATE.md is used)",
-      "  --strict   Fail if any placeholders remain unresolved",
+      "  --strict   Fail if any template variables are undefined",
       "",
       "Defaults (when no --config is provided):",
-      "  1) ~/.agentsync/agents-sync.json",
-      "  2) ./agents-sync.json",
+      "  1) ~/.agentsync/agentsync.config.json",
+      "  2) ./agentsync.config.json",
     ].join("\n"),
   );
 }
@@ -54,7 +60,7 @@ let schemaCache: JsonSchema | null = null;
 
 async function loadBundledSchema(): Promise<JsonSchema> {
   if (schemaCache) return schemaCache;
-  const schemaPath = fileURLToPath(new URL("./agents-sync.schema.json", import.meta.url));
+  const schemaPath = fileURLToPath(new URL("./agentsync.schema.json", import.meta.url));
   const text = await readFile(schemaPath, "utf8");
   const parsed: unknown = JSON.parse(text);
   if (!isObject(parsed)) throw new Error(`Invalid bundled schema at ${schemaPath}`);
@@ -125,7 +131,8 @@ function validateSchemaNode(schema: unknown, value: unknown, at: string, errors:
 
   const items = schema["items"];
   if (items !== undefined && Array.isArray(value)) {
-    for (let i = 0; i < value.length; i += 1) validateSchemaNode(items, value[i], `${at}[${i}]`, errors);
+    for (let i = 0; i < value.length; i += 1)
+      validateSchemaNode(items, value[i], `${at}[${i}]`, errors);
   }
 
   const additionalProperties = schema["additionalProperties"];
@@ -153,7 +160,7 @@ function parseCommonArgs(argv: string[]): {
   templatePathOverride: string | null;
   strict: boolean;
 } {
-  let configPath = "~/.agentsync/agents-sync.json";
+  let configPath = "~/.agentsync/agentsync.config.json";
   let configPathWasDefault = true;
   let templatePathOverride: string | null = null;
   let strict = false;
@@ -250,13 +257,13 @@ async function loadConfigWithDefaultFallback(opts: {
     return { ...loaded, configPath: resolvePath(opts.configPath, process.cwd()) };
   }
 
-  const homeCandidate = resolvePath("~/.agentsync/agents-sync.json", process.cwd());
+  const homeCandidate = resolvePath("~/.agentsync/agentsync.config.json", process.cwd());
   if (existsSync(homeCandidate)) {
     const loaded = await loadConfig(homeCandidate);
     return { ...loaded, configPath: homeCandidate };
   }
 
-  const cwdCandidate = path.resolve(process.cwd(), "agents-sync.json");
+  const cwdCandidate = path.resolve(process.cwd(), "agentsync.config.json");
   if (existsSync(cwdCandidate)) {
     const loaded = await loadConfig(cwdCandidate);
     return { ...loaded, configPath: cwdCandidate };
@@ -278,9 +285,12 @@ function iterTargets(targetsCfg: unknown): Array<Target & { variables: Record<st
     const rawPath = entry["path"];
     const enabled = entry["enabled"];
     const vars = entry["variables"];
-    if (typeof agent !== "string" || agent.length === 0) throw new Error(`targets[${i}].agent must be a non-empty string`);
-    if (typeof rawPath !== "string" || rawPath.length === 0) throw new Error(`targets[${i}].path must be a non-empty string`);
-    if (enabled !== undefined && typeof enabled !== "boolean") throw new Error(`targets[${i}].enabled must be boolean when present`);
+    if (typeof agent !== "string" || agent.length === 0)
+      throw new Error(`targets[${i}].agent must be a non-empty string`);
+    if (typeof rawPath !== "string" || rawPath.length === 0)
+      throw new Error(`targets[${i}].path must be a non-empty string`);
+    if (enabled !== undefined && typeof enabled !== "boolean")
+      throw new Error(`targets[${i}].enabled must be boolean when present`);
     const variables = coerceVariables(vars);
     targets.push({ agentName: agent, rawPath, enabled: enabled ?? true, variables });
   }
@@ -288,22 +298,15 @@ function iterTargets(targetsCfg: unknown): Array<Target & { variables: Record<st
   return targets;
 }
 
-const CURLY_RE = /\{\{\s*([A-Z0-9_]+)\s*\}\}/g;
-const DOLLAR_RE = /\$\{([A-Z0-9_]+)\}/g;
-
-function renderTemplate(templateText: string, variables: Record<string, string>, strict: boolean): string {
-  const rendered = templateText
-    .replace(CURLY_RE, (match, key: string) => variables[key] ?? match)
-    .replace(DOLLAR_RE, (match, key: string) => variables[key] ?? match);
-
-  if (strict) {
-    const unresolved = new Set<string>();
-    for (const m of rendered.matchAll(CURLY_RE)) unresolved.add(String(m[1]));
-    for (const m of rendered.matchAll(DOLLAR_RE)) unresolved.add(String(m[1]));
-    if (unresolved.size > 0) throw new Error(`Unresolved template variables: ${Array.from(unresolved).sort().join(", ")}`);
-  }
-
-  return rendered;
+async function renderTemplate(
+  templateText: string,
+  variables: Record<string, string>,
+  strict: boolean,
+  liquid: Liquid,
+): Promise<string> {
+  return await liquid.parseAndRender(templateText, variables, {
+    strictVariables: strict,
+  });
 }
 
 async function readTextIfExists(filePath: string): Promise<string | null> {
@@ -333,11 +336,13 @@ async function writeFileIfChanged(opts: {
   const existing = await readTextIfExists(opts.dest);
   if (existing === opts.content) return false;
 
-  if (opts.dryRun || opts.check) return true;
-
   if (existing !== null && !opts.overwrite) {
-    throw new Error(`Refusing to overwrite existing file (set options.overwrite=true): ${opts.dest}`);
+    throw new Error(
+      `Refusing to overwrite existing file (set options.overwrite=true): ${opts.dest}`,
+    );
   }
+
+  if (opts.dryRun || opts.check) return true;
 
   await mkdir(path.dirname(opts.dest), { recursive: true });
   if (existing !== null && opts.backup) {
@@ -381,8 +386,13 @@ export async function main(argv: string[]): Promise<number> {
 
     const dryRun = command === "dry-run";
     const check = command === "check";
-    const { configPath, configPathWasDefault, templatePathOverride, strict } = parseCommonArgs(argv.slice(1));
-    const { config, baseDir } = await loadConfigWithDefaultFallback({ configPath, configPathWasDefault });
+    const { configPath, configPathWasDefault, templatePathOverride, strict } = parseCommonArgs(
+      argv.slice(1),
+    );
+    const { config, baseDir } = await loadConfigWithDefaultFallback({
+      configPath,
+      configPathWasDefault,
+    });
 
     const templatePath = templatePathOverride
       ? resolvePath(templatePathOverride, process.cwd())
@@ -417,6 +427,32 @@ export async function main(argv: string[]): Promise<number> {
       .replace(".", "")
       .slice(0, 14);
 
+    const liquidRoots = Array.from(new Set([path.dirname(templatePath), baseDir]));
+    const liquid = new Liquid({
+      root: liquidRoots,
+      partials: liquidRoots,
+      layouts: liquidRoots,
+      extname: "",
+      cache: false,
+      lenientIf: true,
+      fs: {
+        sep: path.sep,
+        dirname: (file) => path.dirname(file),
+        contains: (root, file) => {
+          const rel = path.relative(root, file);
+          return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+        },
+        exists: async (filepath) => existsSync(filepath),
+        existsSync: (filepath) => existsSync(filepath),
+        readFile: async (filepath) => await readFile(filepath, "utf8"),
+        readFileSync: (filepath) => readFileSync(filepath, "utf8"),
+        resolve: (dir, file, ext) => {
+          const withExt = path.extname(file) ? file : `${file}${ext}`;
+          return path.resolve(dir, withExt);
+        },
+      },
+    });
+
     let anyChanges = false;
     for (const target of enabledTargets) {
       const dest = resolvePath(target.rawPath, baseDir);
@@ -431,7 +467,7 @@ export async function main(argv: string[]): Promise<number> {
         ...target.variables,
       };
 
-      const rendered = renderTemplate(templateText, varsForTarget, strict);
+      const rendered = await renderTemplate(templateText, varsForTarget, strict, liquid);
       const changed = await writeFileIfChanged({
         dest,
         content: rendered,
@@ -442,7 +478,8 @@ export async function main(argv: string[]): Promise<number> {
         check,
       });
 
-      const status = dryRun || check ? (changed ? "would update" : "ok") : changed ? "updated" : "ok";
+      const status =
+        dryRun || check ? (changed ? "would update" : "ok") : changed ? "updated" : "ok";
       // eslint-disable-next-line no-console
       console.log(`[${target.agentName}] ${status}: ${dest}`);
 

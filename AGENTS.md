@@ -4,7 +4,7 @@ This folder contains a small tool to keep **one canonical agent-instructions tem
 
 ## Goals
 
-- Keep instructions in a single template (default: `~/.agentsync/AGENTS_TEMPLATE.md`) and a single config (default: `~/.agentsync/agents-sync.json`).
+- Keep instructions in a single template (default: `~/.agentsync/AGENTS_TEMPLATE.md`) and a single config (default: `~/.agentsync/agentsync.config.json`).
 - Make syncing deterministic and safe (idempotent writes, optional backups, explicit enable/disable per target).
 - Keep the runtime dependency-free (no third-party deps).
 - Ship as an npm package (`@claaslange/agentsync`) installable via npm or bun.
@@ -31,14 +31,14 @@ The CLI also injects built-ins (can be overridden by a target’s `variables`):
 - `targets` (required): array of objects `{ agent, path, enabled?, variables? }`.
 - `options` (optional): supports `overwrite`, `backup`, `backup_suffix` (CLI flags/options are intentionally minimal for now).
 
-The config is validated against the bundled JSON Schema at `src/agents-sync.schema.json`.
+The config is validated against the bundled JSON Schema at `src/agentsync.schema.json`.
 You can also add a `$schema` key to your config pointing at the raw GitHub URL for editor autocomplete/validation.
 
 ## Defaults / overrides
 
 - Config path default lookup order:
-  1) `~/.agentsync/agents-sync.json`
-  2) `./agents-sync.json`
+  1) `~/.agentsync/agentsync.config.json`
+  2) `./agentsync.config.json`
 - Override config path via `--config <path>`.
 - Override template path via `--template <path>`.
 - `agentsync` (no args) shows help; `agentsync sync` performs the action; `agentsync dry-run` / `agentsync check` are convenience commands.
@@ -46,7 +46,7 @@ You can also add a `$schema` key to your config pointing at the raw GitHub URL f
 ## Example files
 
 - `example/AGENTS_TEMPLATE.md`
-- `example/agents-sync.json`
+- `example/agentsync.config.json`
 
 ## Publishing
 
