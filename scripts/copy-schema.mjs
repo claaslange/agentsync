@@ -1,4 +1,4 @@
-import { mkdir, copyFile } from "node:fs/promises";
+import { copyFile, mkdir } from "node:fs/promises";
 
 await mkdir(new URL("../dist/", import.meta.url), { recursive: true });
 await copyFile(

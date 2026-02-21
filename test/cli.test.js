@@ -1,8 +1,8 @@
-import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import test from "node:test";
 
 import { main } from "../dist/cli.js";
 
@@ -39,7 +39,7 @@ test("renders Liquid variables + if + for", async () => {
       templatePath,
       [
         "Hello {{ USER }} from {{ AGENT_NAME }}",
-        "{% if AGENT_NAME == \"Claude\" %}CLAUDE{% endif %}",
+        '{% if AGENT_NAME == "Claude" %}CLAUDE{% endif %}',
         "{% for i in (1..3) %}{{ i }}{% endfor %}",
         "",
       ].join("\n"),
@@ -51,8 +51,16 @@ test("renders Liquid variables + if + for", async () => {
         {
           template_path: "AGENTS_TEMPLATE.md",
           targets: [
-            { agent: "claude", path: "out-claude.md", variables: { AGENT_NAME: "Claude", USER: "User" } },
-            { agent: "codex", path: "out-codex.md", variables: { AGENT_NAME: "Codex", USER: "User" } },
+            {
+              agent: "claude",
+              path: "out-claude.md",
+              variables: { AGENT_NAME: "Claude", USER: "User" },
+            },
+            {
+              agent: "codex",
+              path: "out-codex.md",
+              variables: { AGENT_NAME: "Codex", USER: "User" },
+            },
           ],
         },
         null,
@@ -61,7 +69,9 @@ test("renders Liquid variables + if + for", async () => {
       "utf8",
     );
 
-    const { result, errors } = await captureConsole(async () => await main(["sync", "--config", path.join(dir, "agentsync.config.json")]));
+    const { result, errors } = await captureConsole(
+      async () => await main(["sync", "--config", path.join(dir, "agentsync.config.json")]),
+    );
     assert.equal(result, 0);
     assert.deepEqual(errors, []);
 
@@ -86,7 +96,7 @@ test("supports includes resolved from config directory", async () => {
     await writeFile(path.join(dir, "snippet.md"), "Included: {{ USER }}", "utf8");
     await writeFile(
       path.join(templatesDir, "AGENTS_TEMPLATE.md"),
-      ["Start", "{% include \"snippet.md\" %}", "End", ""].join("\n"),
+      ["Start", '{% include "snippet.md" %}', "End", ""].join("\n"),
       "utf8",
     );
     await writeFile(
@@ -102,7 +112,9 @@ test("supports includes resolved from config directory", async () => {
       "utf8",
     );
 
-    const { result } = await captureConsole(async () => await main(["sync", "--config", path.join(dir, "agentsync.config.json")]));
+    const { result } = await captureConsole(
+      async () => await main(["sync", "--config", path.join(dir, "agentsync.config.json")]),
+    );
     assert.equal(result, 0);
 
     const out = await readFile(path.join(dir, "out.md"), "utf8");
@@ -117,11 +129,18 @@ test("--strict fails on undefined variables", async () => {
     await writeFile(path.join(dir, "AGENTS_TEMPLATE.md"), "Hello {{ MISSING }}\n", "utf8");
     await writeFile(
       path.join(dir, "agentsync.config.json"),
-      JSON.stringify({ template_path: "AGENTS_TEMPLATE.md", targets: [{ agent: "x", path: "out.md" }] }, null, 2),
+      JSON.stringify(
+        { template_path: "AGENTS_TEMPLATE.md", targets: [{ agent: "x", path: "out.md" }] },
+        null,
+        2,
+      ),
       "utf8",
     );
 
-    const { result, errors } = await captureConsole(async () => await main(["sync", "--strict", "--config", path.join(dir, "agentsync.config.json")]));
+    const { result, errors } = await captureConsole(
+      async () =>
+        await main(["sync", "--strict", "--config", path.join(dir, "agentsync.config.json")]),
+    );
     assert.equal(result, 1);
     assert.ok(errors.join("\n").includes("undefined variable"));
   });
@@ -145,7 +164,9 @@ test("dry-run respects overwrite=false (predicts sync refusal)", async () => {
       "utf8",
     );
 
-    const { result, errors } = await captureConsole(async () => await main(["dry-run", "--config", path.join(dir, "agentsync.config.json")]));
+    const { result, errors } = await captureConsole(
+      async () => await main(["dry-run", "--config", path.join(dir, "agentsync.config.json")]),
+    );
     assert.equal(result, 1);
     assert.ok(errors.join("\n").includes("Refusing to overwrite"));
   });

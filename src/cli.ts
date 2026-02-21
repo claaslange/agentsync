@@ -1,5 +1,5 @@
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,7 +7,12 @@ import { Liquid } from "liquidjs";
 
 type JsonScalar = string | number | boolean | null;
 
-type TargetEntry = { agent: string; path: string; enabled?: boolean; variables?: Record<string, JsonScalar> };
+type TargetEntry = {
+  agent: string;
+  path: string;
+  enabled?: boolean;
+  variables?: Record<string, JsonScalar>;
+};
 type Config = {
   template_path?: string;
   options?: {
@@ -126,7 +131,8 @@ function validateSchemaNode(schema: unknown, value: unknown, at: string, errors:
 
   const items = schema["items"];
   if (items !== undefined && Array.isArray(value)) {
-    for (let i = 0; i < value.length; i += 1) validateSchemaNode(items, value[i], `${at}[${i}]`, errors);
+    for (let i = 0; i < value.length; i += 1)
+      validateSchemaNode(items, value[i], `${at}[${i}]`, errors);
   }
 
   const additionalProperties = schema["additionalProperties"];
@@ -279,9 +285,12 @@ function iterTargets(targetsCfg: unknown): Array<Target & { variables: Record<st
     const rawPath = entry["path"];
     const enabled = entry["enabled"];
     const vars = entry["variables"];
-    if (typeof agent !== "string" || agent.length === 0) throw new Error(`targets[${i}].agent must be a non-empty string`);
-    if (typeof rawPath !== "string" || rawPath.length === 0) throw new Error(`targets[${i}].path must be a non-empty string`);
-    if (enabled !== undefined && typeof enabled !== "boolean") throw new Error(`targets[${i}].enabled must be boolean when present`);
+    if (typeof agent !== "string" || agent.length === 0)
+      throw new Error(`targets[${i}].agent must be a non-empty string`);
+    if (typeof rawPath !== "string" || rawPath.length === 0)
+      throw new Error(`targets[${i}].path must be a non-empty string`);
+    if (enabled !== undefined && typeof enabled !== "boolean")
+      throw new Error(`targets[${i}].enabled must be boolean when present`);
     const variables = coerceVariables(vars);
     targets.push({ agentName: agent, rawPath, enabled: enabled ?? true, variables });
   }
@@ -328,7 +337,9 @@ async function writeFileIfChanged(opts: {
   if (existing === opts.content) return false;
 
   if (existing !== null && !opts.overwrite) {
-    throw new Error(`Refusing to overwrite existing file (set options.overwrite=true): ${opts.dest}`);
+    throw new Error(
+      `Refusing to overwrite existing file (set options.overwrite=true): ${opts.dest}`,
+    );
   }
 
   if (opts.dryRun || opts.check) return true;
@@ -375,8 +386,13 @@ export async function main(argv: string[]): Promise<number> {
 
     const dryRun = command === "dry-run";
     const check = command === "check";
-    const { configPath, configPathWasDefault, templatePathOverride, strict } = parseCommonArgs(argv.slice(1));
-    const { config, baseDir } = await loadConfigWithDefaultFallback({ configPath, configPathWasDefault });
+    const { configPath, configPathWasDefault, templatePathOverride, strict } = parseCommonArgs(
+      argv.slice(1),
+    );
+    const { config, baseDir } = await loadConfigWithDefaultFallback({
+      configPath,
+      configPathWasDefault,
+    });
 
     const templatePath = templatePathOverride
       ? resolvePath(templatePathOverride, process.cwd())
@@ -462,7 +478,8 @@ export async function main(argv: string[]): Promise<number> {
         check,
       });
 
-      const status = dryRun || check ? (changed ? "would update" : "ok") : changed ? "updated" : "ok";
+      const status =
+        dryRun || check ? (changed ? "would update" : "ok") : changed ? "updated" : "ok";
       // eslint-disable-next-line no-console
       console.log(`[${target.agentName}] ${status}: ${dest}`);
 
